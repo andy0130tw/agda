@@ -292,6 +292,7 @@ data CommandLineOptions = Options
       -- ^ Agda REPL (@-I@).
   , optGHCiInteraction       :: Bool
   , optJSONInteraction       :: Bool
+  , optLSPInteraction        :: Bool
   , optExitOnError           :: !Bool
       -- ^ Exit if an interactive command fails.
   , optCompileDir            :: Maybe FilePath
@@ -878,6 +879,7 @@ defaultOptions = Options
   , optInteractive           = False
   , optGHCiInteraction       = False
   , optJSONInteraction       = False
+  , optLSPInteraction        = False
   , optExitOnError           = False
   , optCompileDir            = Nothing
   , optGenerateVimFile       = False
@@ -1341,6 +1343,9 @@ ghciInteractionFlag o = return $ o { optGHCiInteraction = True }
 jsonInteractionFlag :: Flag CommandLineOptions
 jsonInteractionFlag o = return $ o { optJSONInteraction = True }
 
+lspInteractionFlag :: Flag CommandLineOptions
+lspInteractionFlag o = return o { optLSPInteraction = True }
+
 interactionExitFlag :: Flag CommandLineOptions
 interactionExitFlag o = return $ o { optExitOnError = True }
 
@@ -1513,6 +1518,10 @@ standardOptions =
                     "for use with the Emacs mode"
     , Option []     ["interaction-json"] (NoArg jsonInteractionFlag)
                     "for use with other editors such as Atom"
+    , Option []     ["lsp"] (NoArg lspInteractionFlag)
+                    "for use with other editors such as Atom"
+    , Option []     ["stdio"] (NoArg pure)
+                    "(ignored) For compatibility with annoying LSP clients"
     , Option []     ["interaction-exit-on-error"]
                     (NoArg interactionExitFlag)
                     "exit if a type error is encountered"

@@ -6,6 +6,7 @@
 module Agda.Utils.Lens
   ( module Agda.Utils.Lens
   , (<&>) -- reexported from Agda.Utils.Functor
+  , (&)   -- reexported from Data.Function
   ) where
 
 import Control.Applicative ( Const(Const), getConst )
@@ -16,6 +17,7 @@ import Control.Monad.Writer
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
+import Data.Function
 import qualified Data.Set as Set
 
 import Data.Functor.Identity
@@ -51,6 +53,16 @@ o ^. l = getConst $ l Const o
 set :: Lens' o i -> LensSet o i
 set l = over l . const
 
+-- | Infix version of 'set'.
+(.~) :: Lens' o i -> LensSet o i
+(.~) = set
+infixr 4 .~
+
+-- | Set the target of a 'Lens', focusing on a 'Maybe', to 'Just'.
+(?~) :: Lens' o (Maybe i) -> LensSet o i
+(?~) l x = set l (Just x)
+infixr 4 ?~
+
 -- | Modify inner part @i@ of structure @o@ using a function @i -> i@.
 over :: Lens' o i -> LensMap o i
 over l f o = runIdentity $ l (Identity . f) o
@@ -58,6 +70,10 @@ over l f o = runIdentity $ l (Identity . f) o
 -- | Build a lens out of an isomorphism.
 iso :: (o -> i) -> (i -> o) -> Lens' o i
 iso get set f = fmap set . f . get
+
+-- | Infix version of 'over'.
+(%~) :: Lens' o i -> LensMap o i
+(%~) = over
 
 -- * State accessors and modifiers using 'StateT'.
 

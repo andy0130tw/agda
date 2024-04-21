@@ -17,7 +17,7 @@ module Agda.Interaction.Imports
 
   , Source(..)
   , scopeCheckImport
-  , parseSource
+  , parseSource, parseSource'
   , typeCheckMain
 
   -- Currently only used by test/api/Issue1168.hs:
@@ -130,14 +130,14 @@ data Source = Source
 
 -- | Parses a source file and prepares the 'Source' record.
 
-parseSource :: SourceFile -> TCM Source
-parseSource sourceFile@(SourceFile f) = Bench.billTo [Bench.Parsing] $ do
+parseSource' :: (RangeFile -> TCM TL.Text) -> SourceFile -> TCM Source
+parseSource' get sourceFile@(SourceFile f) = Bench.billTo [Bench.Parsing] $ do
   (source, fileType, parsedMod, attrs, parsedModName) <- mdo
     -- This piece of code uses mdo because the top-level module name
     -- (parsedModName) is obtained from the parser's result, but it is
     -- also used by the parser.
     let rf = mkRangeFile f (Just parsedModName)
-    source                         <- runPM $ readFilePM rf
+    source                         <- get rf
     ((parsedMod, attrs), fileType) <- runPM $
                                       parseFile moduleParser rf $
                                       TL.unpack source
@@ -153,6 +153,9 @@ parseSource sourceFile@(SourceFile f) = Bench.billTo [Bench.Parsing] $ do
     , srcProjectLibs = libs
     , srcAttributes  = attrs
     }
+
+parseSource :: SourceFile -> TCM Source
+parseSource = parseSource' (runPM . readFilePM)
 
 srcDefaultPragmas :: Source -> [OptionsPragma]
 srcDefaultPragmas src = map _libPragmas (srcProjectLibs src)

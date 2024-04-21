@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE CPP #-}
 
 -- | Library management.
 --
@@ -232,7 +233,13 @@ findProjectConfig' root = do
     --   operating systems L/.. refers to R.
     upPath :: FilePath -> IO (Maybe FilePath)
     upPath root = do
+#ifdef wasm32_HOST_ARCH
+      -- canonicalizePath "foo/.." returns "foo/.." rather than "foo" on wasm32-wasi,
+      -- so we just use takeDirectory and cope with the broken symlink behaviour.
+      let up = takeDirectory root
+#else
       up <- canonicalizePath $ root </> ".."
+#endif
       if up == root then return Nothing else return $ Just up
 
 

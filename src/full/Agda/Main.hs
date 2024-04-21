@@ -52,6 +52,7 @@ import Agda.Utils.Null
 
 import Agda.Utils.Impossible
 import Agda.Interaction.Library (getAgdaAppDir)
+import Agda.LSP.Main (runAgdaLSP)
 
 -- | The main function
 runAgda :: [Backend] -> IO ()
@@ -79,7 +80,7 @@ runAgda' backends = runTCMPrettyErrors $ do
         -- When --interaction or --interaction-json is used, then we
         -- use UTF-8 when writing to stdout (and when reading from
         -- stdin).
-        if optGHCiInteraction opts || optJSONInteraction opts
+        if optGHCiInteraction opts || optJSONInteraction opts || optLSPInteraction opts
         then optionError $
                "The option --transliterate must not be combined with " ++
                "--interaction or --interaction-json"
@@ -133,6 +134,7 @@ data FrontendType
   = FrontEndEmacs
   | FrontEndJson
   | FrontEndRepl
+  | FrontEndLSP
 
 -- Emacs mode. Note that it ignores the "check" action because it calls typeCheck directly.
 emacsModeInteractor :: Interactor ()
@@ -145,6 +147,9 @@ jsonModeInteractor setup _check = jsonREPL setup
 -- The deprecated repl mode.
 replInteractor :: Maybe AbsolutePath -> Interactor ()
 replInteractor = runInteractionLoop
+
+lspInteractor :: Interactor ()
+lspInteractor setup _ = runAgdaLSP setup
 
 -- The interactor to use when there are no frontends or backends specified.
 defaultInteractor :: AbsolutePath -> Interactor ()
@@ -161,10 +166,12 @@ getInteractor configuredBackends maybeInputFile opts =
     (_,              _:_:_,           []) -> throwError $ concat ["Must not specify multiple ", enabledFrontendNames]
     (_,              [fe],            []) | optOnlyScopeChecking opts -> errorFrontendScopeChecking fe
     (_,              [FrontEndRepl],  []) -> return $ Just $ replInteractor maybeInputFile
-    (Nothing,        [FrontEndEmacs], []) -> return $ Just $ emacsModeInteractor
-    (Nothing,        [FrontEndJson],  []) -> return $ Just $ jsonModeInteractor
+    (Nothing,        [FrontEndEmacs], []) -> return $ Just emacsModeInteractor
+    (Nothing,        [FrontEndJson],  []) -> return $ Just jsonModeInteractor
+    (Nothing,        [FrontEndLSP],   []) -> return $ Just lspInteractor
     (Just inputFile, [FrontEndEmacs], []) -> errorFrontendFileDisallowed inputFile FrontEndEmacs
     (Just inputFile, [FrontEndJson],  []) -> errorFrontendFileDisallowed inputFile FrontEndJson
+    (Just inputFile, [FrontEndLSP],   []) -> errorFrontendFileDisallowed inputFile FrontEndLSP
   where
     -- NOTE: The notion of a backend being "enabled" *just* refers to this top-level interaction mode selection. The
     -- interaction/interactive front-ends may still invoke available backends even if they are not "enabled".
@@ -174,6 +181,7 @@ getInteractor configuredBackends maybeInputFile opts =
       [ [ FrontEndRepl  | optInteractive     opts ]
       , [ FrontEndEmacs | optGHCiInteraction opts ]
       , [ FrontEndJson  | optJSONInteraction opts ]
+      , [ FrontEndLSP   | optLSPInteraction  opts ]
       ]
     -- Constructs messages like "(no backend)", "backend ghc", "backends (ghc, ocaml)"
     pluralize w []  = concat ["(no ", w, ")"]
@@ -183,8 +191,9 @@ getInteractor configuredBackends maybeInputFile opts =
     enabledFrontendNames = pluralize "frontend" (frontendFlagName <$> enabledFrontends)
     frontendFlagName = ("--" ++) . \case
       FrontEndEmacs -> "interaction"
-      FrontEndJson -> "interaction-json"
-      FrontEndRepl -> "interactive"
+      FrontEndJson  -> "interaction-json"
+      FrontEndRepl  -> "interactive"
+      FrontEndLSP   -> "lsp"
     errorFrontendScopeChecking fe = throwError $
       concat ["The --only-scope-checking flag cannot be combined with ", frontendFlagName fe]
     errorFrontendFileDisallowed inputFile fe = throwError $

@@ -228,7 +228,7 @@ tokenHighlighting :: [T.Token] -> HighlightingInfo
 tokenHighlighting = convert . mconcat . map tokenToHI
   where
   -- Converts an aspect and a range to a file.
-  aToF a r = H.singleton (rToR r) (mempty { aspect = Just a })
+  aToF a r = H.singleton (rToR r) mempty { aspect = Just a, aspectRange = r }
 
   tokenToHI :: T.Token -> HighlightingInfoBuilder
   tokenToHI (T.TokKeyword T.KwForall i)  = aToF Symbol (getRange i)

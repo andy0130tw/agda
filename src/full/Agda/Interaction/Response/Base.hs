@@ -83,6 +83,7 @@ data RemoveTokenBasedHighlighting
     -- ^ Yes, remove all token-based highlighting from the file.
   | KeepHighlighting
     -- ^ No.
+  deriving (Eq)
 
 -- | There are two kinds of \"make case\" commands.
 

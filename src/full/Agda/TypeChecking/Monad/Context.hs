@@ -111,11 +111,13 @@ checkpoint sub k = do
     cps <- viewTC eCheckpoints
     let cps' = Map.insert chkpt IdS $ fmap (applySubst sub) cps
         prCps cps = vcat [ pshow c <+> ": " <+> pretty s | (c, s) <- Map.toList cps ]
+    range <- viewTC eRange
     reportSDoc "tc.cxt.checkpoint" 105 $ return $ nest 2 $ vcat
-      [ "old =" <+> pshow old
-      , "new =" <+> pshow chkpt
-      , "sub =" <+> pretty sub
-      , "cxt =" <+> pretty cxt
+      [ "old ="        <+> pshow old
+      , "new ="        <+> pshow chkpt
+      , "sub ="        <+> pretty sub
+      , "cxt ="        <+> pretty cxt
+      , "range"        <+> pshow range
       , "old substs =" <+> prCps cps
       , "new substs =" <?> prCps cps'
       ]

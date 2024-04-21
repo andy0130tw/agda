@@ -168,7 +168,6 @@ encodePrettyTCM :: PrettyTCM a => a -> TCM Value
 encodePrettyTCM = (encodeShow <$>) . prettyTCM
 
 instance EncodeTCM Rewrite where
-instance ToJSON Rewrite where toJSON = encodeShow
 
 instance EncodeTCM CPUTime where
 instance ToJSON CPUTime where toJSON = encodePretty

@@ -13,7 +13,7 @@ import qualified Agda.Interaction.Highlighting.Precise as HP
 import qualified Agda.Utils.RangeMap                   as RM
 
 import Agda.TypeChecking.Serialise.Base
-import Agda.TypeChecking.Serialise.Instances.Common () --instance only
+import Agda.TypeChecking.Serialise.Instances.Common (SerialisedRange(SerialisedRange, underlyingRange)) --instance only
 
 instance EmbPrj HR.Range where
   icod_ (HR.Range a b) = icodeN' HR.Range a b
@@ -92,6 +92,7 @@ instance EmbPrj HP.OtherAspect where
   icod_ HP.ConfluenceProblem    = pure 12
   icod_ HP.MissingDefinition    = pure 13
   icod_ HP.ShadowingInTelescope = pure 14
+  icod_ HP.Subtree              = pure 15
 
   value = \case
     0  -> pure HP.Error
@@ -109,12 +110,13 @@ instance EmbPrj HP.OtherAspect where
     12 -> pure HP.ConfluenceProblem
     13 -> pure HP.MissingDefinition
     14 -> pure HP.ShadowingInTelescope
+    15 -> pure HP.Subtree
     _  -> malformed
 
 instance EmbPrj HP.Aspects where
-  icod_ (HP.Aspects a b c d e) = icodeN' HP.Aspects a b c d e
+  icod_ (HP.Aspects a b c d e f) = icodeN' (\a b c d e f -> HP.Aspects a b c d (underlyingRange e) f) a b c d (SerialisedRange e) f
 
-  value = valueN HP.Aspects
+  value = valueN \a b c d e f -> HP.Aspects a b c d (underlyingRange e) f
 
 instance EmbPrj HP.DefinitionSite where
   icod_ (HP.DefinitionSite a b c d) = icodeN' HP.DefinitionSite a b c d

@@ -1771,6 +1771,16 @@ data IPFace' t = IPFace'
   { faceEqns :: [(t, t)]
   , faceRHS  :: t
   }
+  deriving (Show, Generic)
+
+instance Functor IPFace' where
+  fmap f (IPFace' eqs r) = IPFace' [ (f x, f y) | (x, y) <- eqs ] (f r)
+
+instance Foldable IPFace' where
+  foldMap f (IPFace' eqs r) = foldMap (\(x, y) -> f x <> f y) eqs <> f r
+
+instance Traversable IPFace' where
+  traverse f (IPFace' eqs r) = IPFace' <$> traverse (\(x, y) -> (,) <$> f x <*> f y) eqs <*> f r
 
 newtype IPBoundary' t = IPBoundary
   { getBoundary :: Map (IntMap Bool) t

@@ -627,7 +627,7 @@ instance Pretty c => Pretty (IPFace' c) where
       -- rhs = case over of
       --         Overapplied    -> "=" <+> pretty meta
       --         NotOverapplied -> mempty
-    prettyList_ xs <+> "⊢" <+> pretty val -- <+> rhs
+    prettyList_ xs <+> "⊢" <+> hlSubtree (pretty val) -- <+> rhs
 
 prettyConstraints :: [Closure Constraint] -> TCM [OutputForm C.Expr C.Expr]
 prettyConstraints cs = do

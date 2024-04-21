@@ -14,6 +14,9 @@ import qualified Data.List                    as List
 import           Data.Map                     (Map)
 import qualified Data.Map                     as Map
 import           Data.Maybe                   (listToMaybe)
+import           Data.Aeson                   (FromJSON, ToJSON)
+
+import           GHC.Generics (Generic)
 
 import {-# SOURCE #-} Agda.TypeChecking.Monad.Base
   (HighlightingLevel, HighlightingMethod, Comparison, Polarity)
@@ -445,7 +448,10 @@ instance Read CompilerBackend where
 
 -- | Ordered ascendingly by degree of normalization.
 data Rewrite =  AsIs | Instantiated | HeadNormal | Simplified | Normalised
-    deriving (Show, Read, Eq, Ord)
+  deriving (Show, Read, Eq, Ord, Generic)
+
+instance FromJSON Rewrite
+instance ToJSON Rewrite
 
 data ComputeMode = DefaultCompute | HeadCompute | IgnoreAbstract | UseShowInstance
   deriving (Show, Read, Eq)

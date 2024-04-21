@@ -11,7 +11,7 @@ module Agda.Interaction.Response
 import Agda.Interaction.Response.Base
 
 import Agda.TypeChecking.Monad.Base
-  (TCM, TCErr, TCWarning, InteractionOutputCallback, defaultInteractionOutputCallback)
+  (TCM, TCErr, TCWarning, InteractionOutputCallback, ModuleInfo, defaultInteractionOutputCallback)
 import Agda.TypeChecking.Warnings (WarningsAndNonFatalErrors)
 
 --------------------------

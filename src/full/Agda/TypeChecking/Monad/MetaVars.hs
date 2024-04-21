@@ -613,6 +613,14 @@ getUnsolvedMetas = do
   interactionMetas     <- getInteractionMetas
   getUniqueMetasRanges (openMetas List.\\ interactionMetas)
 
+getUnsolvedMetaVars ::
+  (HasCallStack, MonadDebug m, ReadTCState m) => m [MetaVariable]
+getUnsolvedMetaVars = do
+  openMetas        <- getOpenMetas
+  interactionMetas <- getInteractionMetas
+  nubOn (clValue . miClosRange . mvInfo) <$>
+    traverse lookupLocalMeta (openMetas List.\\ interactionMetas)
+
 getUnsolvedInteractionMetas ::
   (HasCallStack, MonadDebug m, ReadTCState m) => m [Range]
 getUnsolvedInteractionMetas = getUniqueMetasRanges =<< getInteractionMetas

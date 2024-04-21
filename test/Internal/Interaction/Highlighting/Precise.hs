@@ -484,28 +484,32 @@ instance Arbitrary Aspects where
     other      <- arbitrary
     note       <- string
     defSite    <- arbitrary
+    range      <- arbitrary
     tokenBased <- arbitrary
     return (Aspects { aspect         = aspect
                     , otherAspects   = other
                     , note           = note
                     , definitionSite = defSite
+                    , aspectRange    = range
                     , tokenBased     = tokenBased
                     })
     where string = listOfElements "abcdefABCDEF/\\.\"'@()åäö\n"
 
-  shrink (Aspects a o n d t) =
-    [ Aspects a o n d t | a <- shrink a ] ++
-    [ Aspects a o n d t | o <- shrink o ] ++
-    [ Aspects a o n d t | n <- shrink n ] ++
-    [ Aspects a o n d t | d <- shrink d ] ++
-    [ Aspects a o n d t | t <- shrink t ]
+  shrink (Aspects a o n d r t) =
+    [ Aspects a o n d r t | a <- shrink a ] ++
+    [ Aspects a o n d r t | o <- shrink o ] ++
+    [ Aspects a o n d r t | n <- shrink n ] ++
+    [ Aspects a o n d r t | d <- shrink d ] ++
+    [ Aspects a o n d r t | r <- shrink r ] ++
+    [ Aspects a o n d r t | t <- shrink t ]
 
 instance CoArbitrary Aspects where
-  coarbitrary (Aspects aspect otherAspects note defSite tokenBased) =
+  coarbitrary (Aspects aspect otherAspects note defSite range tokenBased) =
     coarbitrary aspect .
     coarbitrary otherAspects .
     coarbitrary note .
     coarbitrary defSite .
+    coarbitrary range .
     coarbitrary tokenBased
 
 instance Arbitrary TokenBased where

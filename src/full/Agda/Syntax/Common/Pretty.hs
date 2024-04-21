@@ -48,7 +48,6 @@ import Agda.Syntax.Position
 import Agda.Utils.Impossible
 import Agda.Utils.FileName
 
-
 -- * Pretty class
 
 -- | The type of documents. We use documents annotated by 'Aspects' to
@@ -271,11 +270,12 @@ annotateAspect a = annotate a' where
     , note           = ""
     , definitionSite = Nothing
     , tokenBased     = TokenBased
+    , aspectRange    = noRange
     }
 
 -- * Syntax highlighting helpers
 
-hlComment, hlSymbol, hlKeyword, hlString, hlNumber, hlHole, hlPrimitiveType, hlPragma
+hlComment, hlSymbol, hlKeyword, hlString, hlNumber, hlHole, hlPrimitiveType, hlPragma, hlSubtree
   :: Doc -> Doc
 
 hlComment       = annotateAspect Comment
@@ -286,6 +286,14 @@ hlNumber        = annotateAspect Number
 hlHole          = annotateAspect Hole
 hlPrimitiveType = annotateAspect PrimitiveType
 hlPragma        = annotateAspect Pragma
+hlSubtree       = annotate Aspects
+  { aspect         = Nothing
+  , otherAspects   = Set.singleton Subtree
+  , note           = ""
+  , definitionSite = Nothing
+  , tokenBased     = TokenBased
+  , aspectRange    = noRange
+  }
 
 -- * Delimiter wrappers
 --
@@ -298,9 +306,9 @@ quotes       :: Doc -> Doc -- ^ Wrap document in @\'...\'@
 doubleQuotes :: Doc -> Doc -- ^ Wrap document in @\"...\"@
 quotes p       = hlSymbol (char '\'') <> p <> hlSymbol (char '\'')
 doubleQuotes p = hlSymbol (char '"') <> p <> hlSymbol (char '"')
-parens p       = lparen <> p <> rparen
-brackets p     = lbrack <> p <> rbrack
-braces p       = lbrace <> p <> rbrace
+parens p       = lparen <> hlSubtree p <> rparen
+brackets p     = lbrack <> hlSubtree p <> rbrack
+braces p       = lbrace <> hlSubtree p <> rbrace
 
 semi, comma, colon, space, equals, lparen, rparen, lbrack, rbrack, lbrace, rbrace :: Doc
 semi   = hlSymbol $ char ';'

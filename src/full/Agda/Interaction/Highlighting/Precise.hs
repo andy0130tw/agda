@@ -57,6 +57,7 @@ import Agda.Syntax.Common.Aspect
 import Agda.Utils.String
 
 import Agda.Utils.Impossible
+import Agda.Syntax.Position (noRange)
 
 -- | A limited kind of syntax highlighting information: a pair
 -- consisting of 'Ranges' and 'Aspects'.
@@ -289,6 +290,7 @@ mergeAspects m1 m2 = Aspects
         | otherwise -> addFinalNewLine n1 ++ "----\n" ++ n2
   , definitionSite = (unionMaybeWith (<>) `on` definitionSite) m1 m2
   , tokenBased     = tokenBased m1 <> tokenBased m2
+  , aspectRange    = aspectRange m1 <> aspectRange m2
   }
 
 instance Semigroup Aspects where
@@ -301,6 +303,7 @@ instance Monoid Aspects where
     , note           = []
     , definitionSite = Nothing
     , tokenBased     = mempty
+    , aspectRange    = noRange
     }
   mappend = (<>)
 
@@ -320,4 +323,4 @@ instance NFData OtherAspect
 instance NFData DefinitionSite
 
 instance NFData Aspects where
-  rnf (Aspects a b c d _) = rnf a `seq` rnf b `seq` rnf c `seq` rnf d
+  rnf (Aspects a b c d r _) = rnf a `seq` rnf b `seq` rnf c `seq` rnf d `seq` rnf r

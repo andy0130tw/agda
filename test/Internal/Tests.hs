@@ -11,6 +11,7 @@ import qualified Internal.Compiler.MAlonzo.Encode                  as CompEnco  
 import qualified Internal.Interaction.Highlighting.Precise         as IntePrec     ( tests )
 import qualified Internal.Interaction.Highlighting.Range           as InteRang     ( tests )
 import qualified Internal.Interaction.Library                      as Library      ( tests )
+import qualified Internal.Interaction.Lsp.Tests                    as Lsp          ( tests )
 import qualified Internal.Interaction.Options                      as InteOpti     ( tests )
 import qualified Internal.Syntax.Common                            as SyntCommon   ( tests )
 import qualified Internal.Syntax.Internal                          as SyntInternal ( tests )
@@ -64,6 +65,7 @@ tests = testGroup "Internal"
   , IntePrec.tests
   , InteRang.tests
   , Library.tests
+  , Lsp.tests
   , InteOpti.tests
   , SyntCommon.tests
   , SyntInternal.tests

@@ -81,6 +81,8 @@ data OtherAspect
   -- more important, aspects in the emacs mode.
   | CatchallClause
   | ConfluenceProblem
+  | Subtree
+    -- ^ Marker for logical subtrees in pretty-printed output
     deriving (Eq, Ord, Show, Enum, Bounded, Generic)
 
 -- | Some 'NameKind's are more informative than others.
@@ -124,7 +126,8 @@ data Aspects = Aspects
   , definitionSite :: Maybe DefinitionSite
     -- ^ The definition site of the annotated thing, if applicable and
     --   known.
-  , tokenBased :: !TokenBased
+  , aspectRange :: Range
+  , tokenBased  :: !TokenBased
     -- ^ Is this entry token-based?
   }
   deriving (Show, Generic)
@@ -152,7 +155,7 @@ data TokenBased = TokenBased | NotOnlyTokenBased
   deriving (Eq, Show)
 
 instance Eq Aspects where
-  Aspects a o _ d t == Aspects a' o' _ d' t' =
+  Aspects a o _ d _ t == Aspects a' o' _ d' _ t' =
     (a, o, d, t) == (a', o', d', t')
 
 instance NFData Induction where

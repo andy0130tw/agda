@@ -1,0 +1,33 @@
+packages: Agda.cabal
+
+source-repository-package
+  type: git
+  location: https://github.com/SquidDev/lsp.git
+  tag: 268cbb45c65d4ccd7024a4d90b386342a75cbf5d
+  subdir: lsp
+
+source-repository-package
+  type: git
+  location: https://github.com/SquidDev/lsp.git
+  tag: 268cbb45c65d4ccd7024a4d90b386342a75cbf5d
+  subdir: lsp-types
+
+jobs: $ncpus
+
+-- Don't use head.hackage.ghc.haskell.org.
+active-repositories: hackage.haskell.org
+
+-- The semirings package declares instances for a whole bunch of CTypes that don't
+-- exist under wasm. Don't depend on it.
+package mod
+  flags: -semirings
+
+-- Make zlib to compile its own zlib (thus targeting wasm) rather than using
+-- the system one.
+package zlib
+  flags: +bundled-c-zlib -pkg-config
+
+debug-info: True
+
+flags: +optimise-heavily
+-- flags: +debug

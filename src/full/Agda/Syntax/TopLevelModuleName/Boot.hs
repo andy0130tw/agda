@@ -38,7 +38,7 @@ data TopLevelModuleName' range = TopLevelModuleName
   , moduleNameId    :: {-# UNPACK #-} !ModuleNameHash
   , moduleNameParts :: TopLevelModuleNameParts
   }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Functor)
 
 instance HasTag (TopLevelModuleName' range) where
   type Tag (TopLevelModuleName' range) = ModuleNameHash
@@ -57,4 +57,3 @@ instance Hashable (TopLevelModuleName' range) where
 
 instance NFData (TopLevelModuleName' range) where
   rnf (TopLevelModuleName _ x y) = rnf (x, y)
-

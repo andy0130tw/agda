@@ -285,7 +285,7 @@ instance Pretty LamClause where
         , nest 2 $ pretty' rhs
         ]
     where
-      pretty' (RHS e)   = arrow <+> pretty e
+      pretty' (RHS e)   = arrow <+> hlSubtree (pretty e)
       pretty' AbsurdRHS = empty
 
 -- Andreas, 2024-02-25

@@ -139,12 +139,16 @@ activateLoadedFileCache :: (HasOptions m, MonadDebug m, MonadTCState m) => m ()
 activateLoadedFileCache = do
   reportSLn "cache" 10 $ "activateLoadedFileCache"
 
-  whenM (optGHCiInteraction <$> commandLineOptions) $
-    whenM enableCaching $ do
-      modifyCache $ \case
-         Nothing                          -> Just $ LoadedFileCache [] []
-         Just lfc | null (lfcCurrent lfc) -> Just lfc
-         _                                -> __IMPOSSIBLE__
+  interactive <- orM
+    [ optGHCiInteraction <$> commandLineOptions
+    , optJSONInteraction <$> commandLineOptions
+    , optLSPInteraction  <$> commandLineOptions
+    ]
+
+  whenM ((interactive &&) <$> enableCaching) $ modifyCache $ \case
+    Nothing                          -> Just $ LoadedFileCache [] []
+    Just lfc | null (lfcCurrent lfc) -> Just lfc
+    _                                -> __IMPOSSIBLE__
 
 -- | Caches the current type check log.  Discardes the old cache.  Does
 -- nothing if caching is inactive.

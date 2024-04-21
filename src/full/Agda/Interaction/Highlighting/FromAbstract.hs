@@ -580,13 +580,12 @@ hiliteCName xs x fr mR asp = do
   if all (== Just (hleCurrentModuleName env)) moduleNames
   then pure $
     frFile <>
-    H.singleton (rToR rs) (aspects { definitionSite = mFilePos })
+    singleton' rs (aspects { definitionSite = mFilePos })
   else mempty
   where
   aspects     = asp $ C.isOperator x
   moduleNames = mapMaybe (P.rangeModule' . getRange) (x : xs)
-  frFile      = H.singleton (rToR fr) $
-                aspects { definitionSite = notHere <$> mFilePos }
+  frFile      = singleton' fr $ aspects { definitionSite = notHere <$> mFilePos }
   rs          = getRange (x : xs)
 
   -- The fixity declaration should not get a symbolic anchor.
@@ -679,19 +678,27 @@ hiliteAName x include asp = do
 
     boundAspect = nameAsp Bound False
 
-    genPartFile (VarPart r i)  = several [rToR r, rToR $ getRange i] boundAspect
-    genPartFile (HolePart r i) = several [rToR r, rToR $ getRange i] boundAspect
+    genPartFile (VarPart r i)  = several' [r, getRange i] boundAspect
+    genPartFile (HolePart r i) = several' [r, getRange i] boundAspect
     genPartFile WildPart{}     = mempty
-    genPartFile (IdPart x)     = H.singleton (rToR $ getRange x) (asp False)
+    genPartFile (IdPart x)     = singleton' x (asp False)
 
 -- * Short auxiliary functions.
 ---------------------------------------------------------------------------
 
+singleton' :: (HasRange a, IsBasicRangeMap Aspects t) => a -> Aspects -> t
+singleton' x asp =
+  let rng = getRange x
+   in rng `seq` H.singleton (rToR rng) asp{ aspectRange = rng }
+
+several' :: (IsBasicRangeMap Aspects t, Monoid t) => [Range] -> Aspects -> t
+several' x asp = foldMap (flip singleton' asp) x
+
 singleAspect :: HasRange a => Aspect -> a -> Hiliter
-singleAspect a x = pure $ H.singleton (rToR $ getRange x) $ parserBased { aspect = Just a }
+singleAspect a x = pure $ singleton' x $ parserBased { aspect = Just a, aspectRange = getRange x }
 
 singleOtherAspect :: HasRange a => OtherAspect -> a -> Hiliter
-singleOtherAspect a x = pure $ H.singleton (rToR $ getRange x) $ parserBased { otherAspects = singleton a }
+singleOtherAspect a x = pure $ singleton' x $ parserBased { otherAspects = singleton a }
 
 nameAsp' :: Maybe NameKind -> Bool -> Aspects
 nameAsp' k isOp = parserBased { aspect = Just $ Name k isOp }

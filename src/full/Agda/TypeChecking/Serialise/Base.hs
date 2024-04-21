@@ -67,13 +67,13 @@ instance Hashable Node where
     foldedMul (W# x) (W# y) = case timesWord2# x y of (# hi, lo #) -> W# (xor# hi lo)
 
     combine :: Word -> Word -> Word
-    combine x y = foldedMul (xor x y) 11400714819323198549
+    combine x y = foldedMul (xor x y) 323198549
 
     go :: Word -> Node -> Word
     go !h Empty       = h
     go  h (Cons n ns) = go (combine h (fromIntegral n)) ns
 
-  hash = hashWithSalt 3032525626373534813
+  hash = hashWithSalt 73534813
 
 instance B.Binary Node where
 
