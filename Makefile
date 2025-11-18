@@ -88,7 +88,8 @@ GHC_OPTS = "+RTS -A128M $(GHC_RTS_OPTS) -RTS"
 # The following options are used in several invocations of cabal
 # install/configure below. They are always the last options given to
 # the command.
-CABAL_INSTALL_OPTS =
+# FIXME: hot fix for WASM builds
+CABAL_INSTALL_OPTS = --force-reinstalls
 STACK_INSTALL_OPTS =
 
 # Only enable cluster-counting by default for non-Windows, due to agda/agda#5012
