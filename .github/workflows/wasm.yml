@@ -36,7 +36,7 @@ jobs:
     - name: Setup Cabal
       run: nix develop --command bash -c "wasm32-wasi-cabal update && cabal update"
     - name: df after
-      run: df -ah && false
+      run: df -ah
     - name: Build Agda (WASM)
       run: nix develop --command wasm32-wasi-cabal build -fdebug -foptimise-heavily
     - name: Build Agda (native)
