@@ -31,6 +31,11 @@ jobs:
       with:
         submodules: recursive
     - uses: cachix/install-nix-action@v31
+    - name: Dump something
+      run: |
+        ghc --version
+        ghc-pkg list
+        cabal list --installed
     # - name: df before
     #   run: df -ah
     # - name: Setup Cabal
@@ -40,7 +45,7 @@ jobs:
     # - name: Build Agda (WASM)
     #   run: nix develop --command wasm32-wasi-cabal build -fdebug -foptimise-heavily
     - name: Build Agda (native)
-      run: nix develop --command cabal update && make CABAL_FLAG_ICU= install-bin
+      run: nix develop --command bash -c "cabal update && make CABAL_FLAG_ICU= install-bin"
     - id: test-setup
       name: Setup test environment
       run: |
