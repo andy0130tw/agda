@@ -32,10 +32,7 @@ jobs:
         submodules: recursive
     - uses: cachix/install-nix-action@v31
     - name: Dump something
-      run: |
-        ghc --version
-        ghc-pkg list
-        cabal list --installed
+      run: nix develop --command bash -c "ghc --version && ghc-pkg list && cabal list --installed"
     # - name: df before
     #   run: df -ah
     # - name: Setup Cabal
