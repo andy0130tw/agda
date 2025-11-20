@@ -1,7 +1,7 @@
 {
   description = "Agda is a dependently typed programming language / interactive theorem prover.";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/staging-25.11";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
   inputs.ghc-wasm.url = "git+https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta.git";
 
