@@ -24,6 +24,8 @@ jobs:
       with:
         access_token: ${{ github.token }}
     - uses: easimon/maximize-build-space@v10
+      with:
+        root-reserve-mb: 30000
     - uses: actions/checkout@v4
       with:
         submodules: recursive
