@@ -23,26 +23,17 @@ jobs:
       uses: styfle/cancel-workflow-action@0.12.1
       with:
         access_token: ${{ github.token }}
-    - name: Reclaim disk space
-      uses: insightsengineering/disk-space-reclaimer@v1
-      with:
-        tools-cache: true
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - uses: easimon/maximize-build-space@v10
     - uses: cachix/install-nix-action@v31
-    - name: Dump something
-      run: nix develop --command bash -c "ghc --version && ghc-pkg list && cabal list --installed"
-    # - name: df before
-    #   run: df -ah
-    # - name: Setup Cabal
-    #   run: nix develop --command bash -c "wasm32-wasi-cabal update && cabal update"
-    # - name: df after
-    #   run: df -ah
-    # - name: Build Agda (WASM)
-    #   run: nix develop --command wasm32-wasi-cabal build -fdebug -foptimise-heavily
+    - name: Setup Cabal
+      run: nix develop --command bash -c "wasm32-wasi-cabal update && cabal update"
+    - name: Build Agda (WASM)
+      run: nix develop --command wasm32-wasi-cabal build -fdebug -foptimise-heavily
     - name: Build Agda (native)
-      run: nix develop --command bash -c "cabal update && make CABAL_FLAG_ICU= install-bin"
+      run: nix develop --command make CABAL_FLAG_ICU= install-bin
     - id: test-setup
       name: Setup test environment
       run: |
