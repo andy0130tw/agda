@@ -27,13 +27,18 @@ jobs:
         access_token: ${{ github.token }}
     - uses: easimon/maximize-build-space@v10
       with:
-        remove-docker-images: false
+        remove-android: true
+        remove-codeql: true
+        remove-dotnet: true
+        remove-haskell: true
         root-reserve-mb: 30000
     - uses: actions/checkout@v4
       with:
         submodules: recursive
     - uses: nixbuild/nix-quick-install-action@v34
     - uses: nix-community/cache-nix-action@v6
+      with:
+        primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
     - name: Setup Cabal
       run: nix develop --command bash -c "wasm32-wasi-cabal update && cabal update"
     - name: Build Agda (WASM)
