@@ -27,11 +27,7 @@ jobs:
         access_token: ${{ github.token }}
     - uses: easimon/maximize-build-space@v10
       with:
-        remove-android: true
-        remove-codeql: true
-        remove-docker-images: true
-        remove-dotnet: true
-        remove-haskell: true
+        remove-docker-images: false
         root-reserve-mb: 30000
     - uses: actions/checkout@v4
       with:
