@@ -5,10 +5,12 @@
 ##  Edit source in /src/github/workflows/ instead!  ##
 ##                                                  ##
 ######################################################
+permissions:
+  actions: write
 env:
   AGDA_NO_EXEC: 'true'
   AGDA_TESTS_OPTIONS: -j${PARALLEL_TESTS} --hide-successes
-  PARALLEL_TESTS: 2
+  PARALLEL_TESTS: 8
   TASTY_ANSI_TRICKS: 'false'
 jobs:
   build:
@@ -34,7 +36,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - uses: cachix/install-nix-action@v31
+    - uses: nixbuild/nix-quick-install-action@v34
+    - uses: nix-community/cache-nix-action@v6
     - name: Setup Cabal
       run: nix develop --command bash -c "wasm32-wasi-cabal update && cabal update"
     - name: Build Agda (WASM)
