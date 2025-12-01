@@ -687,6 +687,7 @@ library
       Agda.Syntax.Scope.Base
       Agda.Syntax.Scope.Monad
       Agda.Syntax.Scope.Operator
+      Agda.Syntax.Scope.State
       Agda.Syntax.TopLevelModuleName
       Agda.Syntax.TopLevelModuleName.Boot
       Agda.Syntax.Translation.AbstractToConcrete
@@ -820,6 +821,7 @@ library
       Agda.TypeChecking.Rules.LHS.Unify.LeftInverse
       Agda.TypeChecking.Rules.LHS.Unify.Types
       Agda.TypeChecking.Rules.Record
+      Agda.TypeChecking.Rules.Record.Cubical
       Agda.TypeChecking.Rules.Term
       Agda.TypeChecking.Serialise
       Agda.TypeChecking.Serialise.Base
@@ -889,6 +891,7 @@ library
       Agda.Utils.IORef.Strict
       Agda.Utils.Impossible
       Agda.Utils.IndexedList
+      Agda.Utils.IntMap
       Agda.Utils.IntSet.Infinite
       Agda.Utils.Lens
       Agda.Utils.Lens.Examples
@@ -918,12 +921,14 @@ library
       Agda.Utils.SemiRing
       Agda.Utils.Semigroup
       Agda.Utils.Serialize
+      Agda.Utils.Set
       Agda.Utils.Set1
       Agda.Utils.Singleton
       Agda.Utils.Size
       Agda.Utils.SmallSet
       Agda.Utils.StrictState
       Agda.Utils.StrictState2
+      Agda.Utils.StrictWriter
       Agda.Utils.String
       Agda.Utils.Suffix
       Agda.Utils.Three

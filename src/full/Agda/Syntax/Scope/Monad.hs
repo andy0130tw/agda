@@ -3,7 +3,7 @@
 {-| The scope monad with operations.
 -}
 
-module Agda.Syntax.Scope.Monad where
+module Agda.Syntax.Scope.Monad (module Agda.Syntax.Scope.Monad, module Agda.Syntax.Scope.State) where
 
 import Prelude hiding (null)
 
@@ -36,13 +36,14 @@ import Agda.Syntax.Position
 import Agda.Syntax.Fixity
 import Agda.Syntax.Notation
 import Agda.Syntax.Abstract.Name as A
-import qualified Agda.Syntax.Abstract as A
+import Agda.Syntax.Abstract qualified as A
 import Agda.Syntax.Abstract (ScopeCopyInfo(..))
 import Agda.Syntax.Concrete as C
 import Agda.Syntax.Concrete.Fixity
 import Agda.Syntax.Concrete.Definitions ( DeclarationWarning(..) ,DeclarationWarning'(..) )
   -- TODO: move the relevant warnings out of there
 import Agda.Syntax.Scope.Base as A
+import Agda.Syntax.Scope.State
 
 import Agda.TypeChecking.Monad.Base as I
 import Agda.TypeChecking.Monad.Builtin
@@ -74,14 +75,6 @@ import Agda.Utils.Tuple ((***), pattern Pair)
 
 import Agda.Utils.Impossible
 
----------------------------------------------------------------------------
--- * The scope checking monad
----------------------------------------------------------------------------
-
--- | To simplify interaction between scope checking and type checking (in
---   particular when chasing imports), we use the same monad.
-type ScopeM = TCM
-
 -- Debugging
 
 printLocals :: Int -> String -> ScopeM ()
@@ -102,30 +95,6 @@ scopeWarning = withCallerCallStack scopeWarning'
 isDatatypeModule :: ReadTCState m => A.ModuleName -> m (Maybe DataOrRecordModule)
 isDatatypeModule m = do
    scopeDatatypeModule . Map.findWithDefault __IMPOSSIBLE__ m <$> useScope scopeModules
-
-getCurrentModule :: ReadTCState m => m A.ModuleName
-getCurrentModule = setRange noRange <$> useScope scopeCurrent
-
-setCurrentModule :: MonadTCState m => A.ModuleName -> m ()
-setCurrentModule m = do
-  modifyScope $ set scopeCurrent m
-  recomputeInverseScope
-
-withCurrentModule :: (ReadTCState m, MonadTCState m) => A.ModuleName -> m a -> m a
-withCurrentModule new action = do
-  old <- getCurrentModule
-  setCurrentModule new
-  x   <- action
-  setCurrentModule old
-  return x
-
-withCurrentModule' :: (MonadTrans t, Monad (t ScopeM)) => A.ModuleName -> t ScopeM a -> t ScopeM a
-withCurrentModule' new action = do
-  old <- lift getCurrentModule
-  lift $ setCurrentModule new
-  x   <- action
-  lift $ setCurrentModule old
-  return x
 
 getNamedScope :: A.ModuleName -> ScopeM Scope
 getNamedScope m = do
@@ -519,7 +488,7 @@ unbindVariable x = bracket_ (getLocalVars <* modifyLocalVars (AssocList.delete x
 
 -- | Bind a defined name. Must not shadow anything.
 bindName :: Access -> KindOfName -> C.Name -> A.QName -> ScopeM ()
-bindName acc kind x y = bindName' acc kind NoMetadata x y
+bindName acc kind x y = bindName' acc kind noMetadata x y
 
 bindName' :: Access -> KindOfName -> NameMetadata -> C.Name -> A.QName -> ScopeM ()
 bindName' acc kind meta x y = whenJustM (bindName'' acc kind meta x y) typeError
@@ -567,8 +536,8 @@ bindName'' acc kind meta x y = do
 --   Ulf, 2014-06-29: Currently used to rebind the name defined by an
 --   unquoteDecl, which is a 'QuotableName' in the body, but a 'DefinedName'
 --   later on.
-rebindName :: Access -> KindOfName -> C.Name -> A.QName -> ScopeM ()
-rebindName acc kind x y = do
+rebindName :: Access -> KindOfName -> NameMetadata -> C.Name -> A.QName -> ScopeM ()
+rebindName acc kind meta x y = do
   if kind == ConName then do
     modifyCurrentScope $
            mapScopeNS (localNameSpace acc)
@@ -578,7 +547,7 @@ rebindName acc kind x y = do
   else do
     modifyCurrentScope $ removeNameFromScope (localNameSpace acc) x
   recomputeInverseScope
-  bindName acc kind x y
+  bindName' acc kind meta x y
 
 -- András, 2025-08-30: TODO: directly extend inverse scope.
 -- | Bind a module name.
@@ -1081,12 +1050,12 @@ noGeneralizedVarsIfLetOpen TopOpenModule = id
 noGeneralizedVarsIfLetOpen LetOpenModule = disallowGeneralizedVars
 
 -- | Open a module.
-openModule_ :: OpenKind -> C.QName -> C.ImportDirective -> ScopeM A.ImportDirective
-openModule_ kind cm dir = openModule kind Nothing cm dir
+openModule_ :: KwRange -> OpenKind -> C.QName -> C.ImportDirective -> ScopeM A.ImportDirective
+openModule_ kwr kind cm dir = openModule kwr kind Nothing cm dir
 
 -- | Open a module, possibly given an already resolved module name.
-openModule :: OpenKind -> Maybe A.ModuleName  -> C.QName -> C.ImportDirective -> ScopeM A.ImportDirective
-openModule kind mam cm dir = do
+openModule :: KwRange -> OpenKind -> Maybe A.ModuleName  -> C.QName -> C.ImportDirective -> ScopeM A.ImportDirective
+openModule kwr kind mam cm dir = do
   current <- getCurrentModule
   m <- caseMaybe mam (amodName <$> resolveModule cm) return
   let acc | Nothing <- publicOpen dir     = PrivateNS

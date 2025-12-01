@@ -832,7 +832,7 @@ Pattern matching and equality
 
 .. option:: --polarity, --no-polarity
 
-     .. versionadded:: 2.6.5
+     .. versionadded:: 2.8.0
 
      Enables the use of modal polarity annotations, and their interaction with
      the positivity checker. See :ref:`polarity`.
@@ -1040,7 +1040,7 @@ Search depth and instances
 
 .. option:: --backtracking-instance-search, --no-backtracking-instance-search
 
-     .. versionadded:: 2.6.5
+     .. versionadded:: 2.7.0
 
      Consider [do not consider] recursive instance arguments during
      pruning of instance candidates, see :ref:`backtracking-instances`
@@ -1425,6 +1425,10 @@ The list containing any warning ``NAME`` can be produced by ``agda --help=warnin
 
      Hidden identifiers in ``variable`` blocks.
 
+.. option:: IllegalDeclarationInDataDefinition
+
+     Declarations inside of a ``data`` definition that are not constructor type signatures.
+
 .. option:: IllformedAsClause
 
      Illformed ``as``-clauses in ``import`` statements.
@@ -1467,6 +1471,11 @@ The list containing any warning ``NAME`` can be produced by ``agda --help=warnin
 .. option:: InvalidCoverageCheckPragma
 
      :ref:`NON_COVERING <non_covering-pragma>` pragmas before non-function or ``mutual`` blocks.
+
+.. option:: InvalidDataOrRecDefParameter
+
+     A ``data/record D parameters where`` definition where the parameters do not match up
+     with the previously given signature or contain more than just names with hiding information.
 
 .. option:: InvalidNoPositivityCheckPragma
 

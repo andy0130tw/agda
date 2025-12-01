@@ -74,12 +74,23 @@ Warnings
 * `UselessPragma` warning instead of hard error `NeedOptionRewriting` when a
   `REWRITE` or `BUILTIN REWRITE` pragma is encountered but `--rewriting` is off.
 
+* Error warning `IllegalDeclarationInDataDefinition` instead of hard error
+  when `data` definition contains declarations other than type signatures of
+  constructors.
+
 * New warning `DivergentModalityInClause` when modality of a clause diverges
   from that of the function.  Example:
   ```agda
   A : Set₁
   @0 A = Set
   ```
+
+* New warning `InvalidDataOrRecDefParameter` for information (e.g. type, attributes)
+  attached to parameters in a `data` or `record` definition (that is separate of its
+  data or record signature).
+  This replaces errors:
+  - `UnexpectedModalityAnnotationInParameter`
+  - `UnexpectedTypeSignatureForParameter`
 
 * New warning `InvalidTacticAttribute` for misplaced `@(tactic ...)` attributes.
   This was silently accepted up to Agda 2.8.0 but raises now the new warning:

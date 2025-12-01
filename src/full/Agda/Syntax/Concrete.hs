@@ -29,7 +29,7 @@ module Agda.Syntax.Concrete
   , mkBinder
   , LamBinding
   , LamBinding'(..)
-  , dropTypeAndModality
+  , DefParameters, parametersToDefParameters, defParametersToParameters
   , TypedBinding
   , TypedBinding'(..)
   , RecordAssignment
@@ -40,7 +40,7 @@ module Agda.Syntax.Concrete
   , TacticAttribute
   , TacticAttribute'(..)
   , Telescope, Telescope1
-  , lamBindingsToTelescope
+  , Parameters, parametersToTelescope
   , makePi
   , mkLam, mkLet, mkTLet
     -- * Declarations
@@ -271,7 +271,12 @@ mkBinder_ = mkBinder . mkBoundName_
 mkBinder :: a -> Binder' a
 mkBinder = Binder Nothing UserBinderName
 
--- | A lambda binding is either domain free or typed.
+-- | Parameters supplied to data and record definitions (as opposed to their signatures)
+--   are stripped of their type information.
+--   They also cannot contain @let@ or pattern bindings or tactic attributes.
+type DefParameters = [WithHiding (Named_ Name)]
+
+-- | A lambda binding is either untyped (domain free) or typed ('TypedBinding').
 
 type LamBinding = LamBinding' TypedBinding
 data LamBinding' a
@@ -281,12 +286,25 @@ data LamBinding' a
     -- ^ . @(xs : e)@ or @{xs : e}@
   deriving (Functor, Foldable, Traversable, Eq)
 
--- | Drop type annotations and lets from bindings.
-dropTypeAndModality :: LamBinding -> [LamBinding]
-dropTypeAndModality (DomainFull (TBind _ xs _)) =
-  map (DomainFree . setModality defaultModality) $ List1.toList xs
-dropTypeAndModality (DomainFull TLet{}) = []
-dropTypeAndModality (DomainFree x) = [DomainFree $ setModality defaultModality x]
+-- | Parameters are sequences of typed or untyped bindings.
+type Parameters = [LamBinding]
+
+-- | Drop type annotations and modalities from bindings.
+--   Also drop let, patterns, fixity, and tactics,
+--   but those should not be present in the first place when using this function,
+--   because all such cannot occur in data and record parameters.
+parametersToDefParameters :: Parameters -> DefParameters
+parametersToDefParameters = concatMap \case
+    DomainFree x              -> [strip x]
+    DomainFull (TBind _ xs _) -> map strip $ List1.toList xs
+    DomainFull TLet{}         -> __IMPOSSIBLE__
+  where
+    strip :: NamedArg Binder -> WithHiding (Named_ Name)
+    strip = unArgKeepHiding . fmap (fmap (boundName . binderName))
+
+defParametersToParameters :: DefParameters -> Parameters
+defParametersToParameters = map \ (WithHiding h n) ->
+  DomainFree $ setHiding h $ defaultArg $ mkBinder_ <$> n
 
 data BoundName = BName
   { boundName       :: Name
@@ -328,11 +346,11 @@ data TypedBinding' e
 type Telescope1 = List1 TypedBinding
 type Telescope  = [TypedBinding]
 
--- | We can try to get a @Telescope@ from a @[LamBinding]@.
+-- | We can get a @Telescope@ from @Parameters@.
 --   If we have a type annotation already, we're happy.
 --   Otherwise we manufacture a binder with an underscore for the type.
-lamBindingsToTelescope :: Range -> [LamBinding] -> Telescope
-lamBindingsToTelescope r = fmap $ \case
+parametersToTelescope :: Range -> Parameters -> Telescope
+parametersToTelescope r = fmap $ \case
   DomainFull ty -> ty
   DomainFree nm -> TBind r (List1.singleton nm) $ Underscore r Nothing
 
@@ -520,13 +538,13 @@ data Declaration
   | Generalize KwRange [TypeSignature] -- ^ Variables to be generalized, can be hidden and/or irrelevant.
   | Field KwRange [FieldSignature]
   | FunClause ArgInfo LHS RHS WhereClause Catchall -- ^ Only 'Modality' is used in 'ArgInfo'.
-  | DataSig     Range Erased Name [LamBinding] Expr -- ^ lone data signature in mutual block
-  | Data        Range Erased Name [LamBinding] Expr
+  | DataSig     Range Erased Name Parameters Expr -- ^ lone data signature in mutual block
+  | Data        Range Erased Name Parameters Expr
                 [TypeSignatureOrInstanceBlock]
-  | DataDef     Range Name [LamBinding] [TypeSignatureOrInstanceBlock]
-  | RecordSig   Range Erased Name [LamBinding] Expr -- ^ lone record signature in mutual block
-  | RecordDef   Range Name [RecordDirective] [LamBinding] [Declaration]
-  | Record      Range Erased Name [RecordDirective] [LamBinding] Expr
+  | DataDef     Range Name Parameters [TypeSignatureOrInstanceBlock]
+  | RecordSig   Range Erased Name Parameters Expr -- ^ lone record signature in mutual block
+  | RecordDef   Range Name [RecordDirective] Parameters [Declaration]
+  | Record      Range Erased Name [RecordDirective] Parameters Expr
                 [Declaration]
   | Infix Fixity (List1 Name)
   | Syntax      Name Notation -- ^ notation declaration for a name
@@ -546,8 +564,8 @@ data Declaration
   | Macro       KwRange [Declaration]
   | Postulate   KwRange [TypeSignatureOrInstanceBlock]
   | Primitive   KwRange [TypeSignature]
-  | Open        Range QName ImportDirective
-  | Import      (Ranged OpenShortHand) KwRange QName (Either AsName RawOpenArgs) ImportDirective
+  | Open        KwRange QName ImportDirective
+  | Import      OpenShortHand KwRange QName (Either AsName RawOpenArgs) ImportDirective
   | ModuleMacro Range Erased  Name ModuleApplication !OpenShortHand
                 ImportDirective
   | Module      Range Erased QName Telescope [Declaration]
@@ -621,7 +639,9 @@ data ModuleApplication
     -- ^ @M {{...}}@
   deriving Eq
 
-data OpenShortHand = DoOpen | DontOpen
+data OpenShortHand
+  = DoOpen KwRange -- ^ Range of the @open@ keyword.
+  | DontOpen
   deriving (Eq, Show, Generic)
 
 -- Pragmas ----------------------------------------------------------------
@@ -886,6 +906,9 @@ isBinderP = \case
 -- Null
 ------------------------------------------------------------------------
 
+instance Null OpenShortHand where
+  empty = DontOpen
+
 -- | A 'WhereClause' is 'null' when the @where@ keyword is absent.
 --   An empty list of declarations does not count as 'null' here.
 
@@ -924,6 +947,11 @@ instance LensRelevance TypedBinding where
 
 -- HasRange instances
 ------------------------------------------------------------------------
+
+instance HasRange OpenShortHand where
+  getRange = \case
+    DoOpen kwr -> getRange kwr
+    DontOpen   -> empty
 
 instance HasRange e => HasRange (OpApp e) where
   getRange = \case
@@ -1028,7 +1056,7 @@ instance HasRange Declaration where
   getRange (LoneConstructor kwr ds)= fuseRange kwr ds
   getRange (Abstract kwr ds)       = fuseRange kwr ds
   getRange (Generalize kwr ds)     = fuseRange kwr ds
-  getRange (Open r _ _)            = r
+  getRange (Open kwr x dir)        = getRange (kwr, x, dir)
   getRange (ModuleMacro r _ _ _ _ _)
                                    = r
   getRange (Import a b c d e)      = getRange (a, b, c, d, e)
@@ -1144,6 +1172,11 @@ instance SetRange TypedBinding where
 -- KillRange instances
 ------------------------------------------------------------------------
 
+instance KillRange OpenShortHand where
+  killRange = \case
+    DoOpen _ -> DoOpen empty
+    DontOpen -> DontOpen
+
 instance KillRange a => KillRange (FieldAssignment' a) where
   killRange (FieldAssignment a b) = killRangeN FieldAssignment a b
 
@@ -1190,7 +1223,7 @@ instance KillRange Declaration where
   killRange (Macro _ d)             = killRangeN (Macro empty) d
   killRange (Postulate _ t)         = killRangeN (Postulate empty) t
   killRange (Primitive _ t)         = killRangeN (Primitive empty) t
-  killRange (Open _ q i)            = killRangeN (Open noRange) q i
+  killRange (Open _ q i)            = killRangeN (Open empty) q i
   killRange (Import a b c d e)      = killRangeN Import a b c d e
   killRange (ModuleMacro _ e n m o i)
                                     = killRangeN

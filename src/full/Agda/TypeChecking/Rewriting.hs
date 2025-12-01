@@ -147,7 +147,7 @@ addRewriteRules qs = do
       "adding rule" <+> prettyTCM (rewName rew) <+>
       "to the definition of" <+> prettyTCM f
     reportSDoc "rewriting" 30 $ "matchable symbols: " <+> prettyTCM matchables
-    modifySignature $ addRewriteRulesFor f [rew] matchables
+    addRewriteRulesFor f [rew] matchables
 
   -- Run confluence check for the new rules
   -- (should be done after adding all rules, see #3795)
@@ -454,7 +454,7 @@ rewrite block hd rules es = do
   rewritingAllowed <- optRewriting <$> pragmaOptions
   if (rewritingAllowed && not (null rules)) then do
     (_ , t) <- fromMaybe __IMPOSSIBLE__ <$> getTypedHead (hd [])
-    loop block t rules =<< instantiateFull' es -- TODO: remove instantiateFull?
+    loop block t rules es
   else
     return $ NoReduction (block $> hd es)
   where

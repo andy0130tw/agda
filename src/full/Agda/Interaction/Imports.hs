@@ -117,6 +117,7 @@ import qualified Agda.Utils.Trie as Trie
 
 import Agda.Utils.Impossible
 import System.IO.Error (isUserError, isFullError)
+import Agda.TypeChecking.Rewriting.NonLinPattern (getMatchables)
 
 -- | Whether to ignore interfaces (@.agdai@) other than built-in modules
 
@@ -359,7 +360,7 @@ addImportedThings
   -> TCM ()
 addImportedThings isig metas ibuiltin patsyns display userwarn
                   partialdefs warnings oblock oid = do
-  stImports              `modifyTCLens` \ imp -> unionSignature imp isig
+  stImports              `modifyTCLens` \ imp -> importSignature imp isig
   stImportedMetaStore    `modifyTCLens` HMap.union metas
   stImportedBuiltins     `modifyTCLens` \ imp -> Map.union imp ibuiltin
   stImportedUserWarnings `modifyTCLens` \ imp -> Map.union imp userwarn
@@ -369,6 +370,33 @@ addImportedThings isig metas ibuiltin patsyns display userwarn
   stTCWarnings           `modifyTCLens` \ imp -> Set.union imp warnings
   stOpaqueBlocks         `modifyTCLens` \ imp -> imp `Map.union` oblock
   stOpaqueIds            `modifyTCLens` \ imp -> imp `Map.union` oid
+
+-- | Merges two signatures, assuming the second is being imported into the first
+--
+-- This is not commutative: `Map.union` is left-biased and we also assume that
+-- updates from rewrite rules in the first signature do not need to be
+-- re-applied (rewrite rules in the current signature cannot refer to
+-- definitions that are not in the current signature)
+importSignature ::
+     Signature
+       -- ^ Current signature
+  -> Signature
+       -- ^ Signature being imported
+  -> Signature
+       -- ^ Merged signature
+importSignature (Sig a b c d) (Sig a' b' c' d') =
+  Sig (Map.union a a')
+      (fixupDefs $ HMap.union b b') -- definitions are unique (in at most one module) but need to be fixed to account for the new rewrite rules
+      (HMap.unionWith mappend c c') -- rewrite rules are accumulated
+      (d <> d')                     -- instances are accumulated
+  where
+    -- #8218: Rewrite rules can modify the signature (e.g. definitional
+    -- injectivity of the head symbol). We need to replay these adjustments when
+    -- importing because rewrite rules might be defined in a different module
+    -- from the definitions they modify.
+    fixupDefs ds = foldr (\(f, rews) -> updateDefsForRewrites f rews
+                                      $ rews >>= getMatchables)
+                         ds (HMap.toList c')
 
 -- | Scope checks the given module, generating an interface or retrieving an existing one.
 --   Returns the module name and exported scope from the interface.
@@ -903,8 +931,8 @@ loadDecodedModule sf@(SourceFile fi) mi = do
 --   we do it in a fresh state, suitably initialize,
 --   in order to forget some state changes after successful type checking.
 
-createInterfaceIsolated
-  :: TopLevelModuleName
+createInterfaceIsolated ::
+     TopLevelModuleName
      -- ^ Module name of file we process.
   -> SourceFile
      -- ^ File we process.
@@ -1077,8 +1105,8 @@ writeInterface file i = let fp = filePath file in do
 -- If appropriate this function writes out syntax highlighting
 -- information.
 
-createInterface
-  :: TopLevelModuleName    -- ^ The expected module name.
+createInterface ::
+     TopLevelModuleName    -- ^ The expected module name.
   -> SourceFile            -- ^ The file to type check.
   -> MainInterface         -- ^ Are we dealing with the main module?
   -> Maybe Source      -- ^ Optional information about the source code.

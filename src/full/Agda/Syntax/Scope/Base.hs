@@ -1,3 +1,5 @@
+-- {-# OPTIONS_GHC -Wunused-imports #-}
+
 -- {-# OPTIONS_GHC -ddump-simpl -ddump-to-file -dsuppress-all -dno-suppress-type-signatures #-}
 
 {-| This module defines the notion of a scope and operations on scopes.
@@ -9,50 +11,51 @@ import Prelude hiding ( null, length )
 import Control.DeepSeq
 import Control.Monad
 
-import Data.Hashable
-import Data.Either (partitionEithers)
-import Data.Foldable ( length, toList, foldl' )
-import Data.Function (on)
-import Data.IORef
-import qualified Data.List as List
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HMap
-import Data.Ord (Down(..))
+import Data.Either         ( partitionEithers )
+import Data.Foldable       ( length, toList, foldl' )
+import Data.Function       ( on )
+import Data.HashMap.Strict ( HashMap )
+import Data.HashMap.Strict qualified as HMap
+import Data.Hashable       ( Hashable, hashWithSalt )
+import Data.List           qualified as List
+import Data.Map.Strict     ( Map )
+import Data.Map.Strict     qualified as Map
 import Data.Maybe
+import Data.Ord            ( Down(..) )
+
 import GHC.Generics (Generic)
 
 import Agda.Benchmarking
 
-import Agda.Syntax.Position
+import Agda.Syntax.Abstract.Name   as A
 import Agda.Syntax.Common
-import Agda.Syntax.Fixity
-import Agda.Syntax.Abstract.Name as A
-import Agda.Syntax.Concrete.Name as C
-import qualified Agda.Syntax.Concrete as C
+import Agda.Syntax.Concrete        qualified as C
 import Agda.Syntax.Concrete.Fixity as C
+import Agda.Syntax.Concrete.Name   as C
+import Agda.Syntax.Fixity
+import Agda.Syntax.Position
 
-import Agda.Utils.AssocList (AssocList)
-import qualified Agda.Utils.AssocList as AssocList
+import Agda.Syntax.Common.Pretty
+import Agda.Utils.AssocList        ( AssocList )
+import Agda.Utils.AssocList        qualified as AssocList
+import Agda.Utils.Function         ( applyWhen )
 import Agda.Utils.Functor
 import Agda.Utils.Lens
 import Agda.Utils.List
-import Agda.Utils.List1 ( List1, pattern (:|) )
-import Agda.Utils.List2 ( List2 )
-import qualified Agda.Utils.List1 as List1
-import qualified Agda.Utils.List2 as List2
+import Agda.Utils.List1            ( List1, pattern (:|) )
+import Agda.Utils.List1            qualified as List1
+import Agda.Utils.List2            ( List2 )
+import Agda.Utils.List2            qualified as List2
+import Agda.Utils.Map              qualified as Map
+import Agda.Utils.Maybe            ( predicateToMaybe )
 import Agda.Utils.Null
-import Agda.Syntax.Common.Pretty
-import Agda.Utils.Set1 ( Set1 )
+import Agda.Utils.Set              ( Set )
+import Agda.Utils.Set              qualified as Set
+import Agda.Utils.Set1             ( Set1 )
 import Agda.Utils.Singleton
-import qualified Agda.Utils.Map as Map
-import qualified Agda.Utils.StrictState2 as St2
-import qualified Agda.Utils.StrictState as St
-import Agda.Utils.Tuple ( (//), first, second )
-import Agda.Utils.Tuple.Strict ( (&!&) )
+import Agda.Utils.StrictState2     qualified as St2
+import Agda.Utils.Tuple            ( first, second )
+import Agda.Utils.Tuple.Strict     ( (&!&) )
 
 import Agda.Utils.Impossible
 
@@ -559,9 +562,30 @@ instance Hashable AbstractName where
   hashWithSalt salt n =
     hashWithSalt salt (A.nameId (qnameName (anameName n)))
 
-data NameMetadata = NoMetadata
-                  | GeneralizedVarsMetadata (Map A.QName A.Name)
+data NameMetadata = NameMetadata
+  { nameDataGeneralizedVars :: Map A.QName A.Name
+  , nameDataIsInstance      :: IsInstance
+  }
   deriving (Show, Generic)
+
+instance Null NameMetadata where
+  empty = NameMetadata empty empty
+  null (NameMetadata m i) = null m && null i
+
+noMetadata :: NameMetadata
+noMetadata = empty
+
+generalizedVarsMetadata :: Map A.QName A.Name -> NameMetadata
+generalizedVarsMetadata m = NameMetadata m empty
+
+instanceMetadata :: IsInstance -> NameMetadata
+instanceMetadata i = NameMetadata empty i
+
+instance IsInstanceDef NameMetadata where
+  isInstanceDef = isInstanceDef . nameDataIsInstance
+
+instance IsInstanceDef AbstractName where
+  isInstanceDef = isInstanceDef . anameMetadata
 
 -- | A decoration of abstract syntax module names.
 data AbstractModule = AbsModule
@@ -885,6 +909,13 @@ filterScope pd pm = recomputeInScopeSets .  mapScope_ (Map.filterKeys pd) (Map.f
   -- We don't have enough information in the in scope set to do an
   -- incremental update here, so just recompute it from the name map.
 
+-- | Filter a scope keeping only concrete names matching the predicates.
+--   The first predicate is applied to the names and the second to the modules.
+mapScopeMaybe :: (C.Name -> Maybe C.Name) -> (C.Name -> Maybe C.Name) -> Scope -> Scope
+mapScopeMaybe pd pm = recomputeInScopeSets .  mapScope_ (Map.mapKeysMaybe pd) (Map.mapKeysMaybe pm) id
+  -- We don't have enough information in the in scope set to do an
+  -- incremental update here, so just recompute it from the name map.
+
 -- allNamePartsInScope :: Scope -> NamePartsInScope
 -- allNamePartsInScope =
 --   Map.unionsWith (<>) . map (nsNameParts . snd) . scopeNameSpaces
@@ -1120,16 +1151,16 @@ applyImportDirective_ dir@(ImportDirective{ impRenaming }) s
 
     -- Restrict scope by directive.
     useOrHide :: UsingOrHiding -> Scope -> Scope
-    useOrHide (UsingOnly  xs) = filterNames Set.member xs
+    useOrHide (UsingOnly  xs) = filterNames (flip Set.lookupKey) xs
        -- Filter scope, keeping only xs.
-    useOrHide (HidingOnly xs) = filterNames Set.notMember $ map renFrom impRenaming ++ xs
+    useOrHide (HidingOnly xs) = filterNames (predicateToMaybe . flip Set.notMember) $ map renFrom impRenaming ++ xs
        -- Filter out xs and the to be renamed names from scope.
 
-    -- Filter scope by (`rel` xs).
+    -- Filter scope by (rel xs).
     -- O(n * log (length xs)).
-    filterNames :: (C.Name -> Set C.Name -> Bool) -> [C.ImportedName] ->
+    filterNames :: (Set C.Name -> C.Name -> Maybe C.Name) -> [C.ImportedName] ->
                    Scope -> Scope
-    filterNames rel xs = filterScope (`rel` Set.fromList ds) (`rel` Set.fromList ms)
+    filterNames rel xs = mapScopeMaybe (rel $ Set.fromList ds) (rel $ Set.fromList ms)
       where
         (ds, ms) = partitionEithers $ for xs $ \case
           ImportedName   x -> Left x
@@ -1592,12 +1623,20 @@ instance Pretty NameSpace where
 
 prettyNameSpace :: NameSpace -> [Doc]
 prettyNameSpace (NameSpace names nameParts mods _) =
-    blockOfLines "names"      (map pr $ Map.toList names) ++
+    blockOfLines "names"      (map pr' $ Map.toList names) ++
     blockOfLines "name parts" (map pr $ Map.toList nameParts) ++
     blockOfLines "modules"    (map pr $ Map.toList mods)
   where
     pr :: (Pretty a, Pretty b) => (a,b) -> Doc
     pr (x, y) = pretty x <+> "-->" <+> pretty y
+    -- pr' :: (Pretty a, IsInstanceDef b, Pretty b) => (a, List1 b) -> Doc
+    pr' :: (C.Name, List1 AbstractName) -> Doc
+    pr' (x, ys) = pretty x <+> "-->" <+> prettyList (map PrettyWithInstance $ List1.toList ys)
+
+newtype PrettyWithInstance a = PrettyWithInstance a
+instance (IsInstanceDef a, Pretty a) => Pretty (PrettyWithInstance a) where
+  pretty (PrettyWithInstance x) =
+    applyWhen (isJust $ isInstanceDef x) ("instance" <+>) $ pretty x
 
 instance Pretty Scope where
   pretty scope@Scope{ scopeName = name, scopeParents = parents, scopeImports = imps } =
