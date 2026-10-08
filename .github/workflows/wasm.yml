@@ -50,7 +50,9 @@ jobs:
     - name: Build Agda (WASM)
       run: true  # nix develop --command wasm32-wasi-cabal build -fdebug -foptimise-heavily
     - name: Build Agda (native)
-      run: nix develop --command make CABAL_FLAG_ICU= install-bin
+      run: |
+        nix develop --command cabal v1-configure --enable-tests -foptimise-heavily --builddir=./dist-2.9.0-ghc-9.10.3 -fdebug --disable-library-profiling  -fversion-with-git-hash --ghc-options="+RTS -A128M -M6G -RTS"  --program-suffix=-2.9.0
+        nix develop --command make CABAL_FLAG_ICU= install-bin
     - id: test-setup
       name: Setup test environment
       run: |
